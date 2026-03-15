@@ -272,19 +272,31 @@ def step_pi_reconnect_wifi(wifi_ssid: str) -> None:
 
 
 def step_install_daemon() -> None:
-    """Step 5: Install OpenClaw as a system daemon service.
+    """Step 5: Install OpenClaw as a system daemon service (best-effort).
 
-    On Windows there is no systemd/launchd — openclaw onboard handles
-    Linux and macOS only. We skip this step on Windows and let the user
-    start the gateway manually (or via NSSM separately).
+    On Windows and desktop Linux there is no systemd/launchd managed by
+    openclaw onboard — we skip silently and rely on step_restart_gateway
+    to launch the process directly. Only attempt on Pi and macOS where the
+    daemon install is known to work.
     """
     if IS_WINDOWS:
         print("[apply_config] Skipping daemon install on Windows.", file=sys.stderr)
         return
+    if IS_PI_OR_LINUX and not IS_PI:
+        # Desktop Linux (e.g. Mint, Ubuntu) — onboard --install-daemon
+        # requires root and is Pi-oriented; skip it and let the gateway
+        # start directly instead.
+        print("[apply_config] Desktop Linux — skipping daemon install.", file=sys.stderr)
+        return
     exe = _find_openclaw()
     if not exe:
-        raise FileNotFoundError("openclaw executable not found for onboard step")
-    subprocess.run([exe, "onboard", "--install-daemon"], check=True)
+        print("[apply_config] openclaw not found — skipping daemon install.", file=sys.stderr)
+        return
+    try:
+        subprocess.run([exe, "onboard", "--install-daemon"], check=True)
+    except Exception as exc:
+        # Best-effort: log but do not abort setup — gateway will start directly.
+        print(f"[apply_config] daemon install skipped: {exc}", file=sys.stderr)
 
 
 def step_run_doctor() -> str:
@@ -310,9 +322,10 @@ def step_run_doctor() -> str:
 def step_restart_gateway() -> None:
     """Step 7: Start or restart the OpenClaw gateway (best-effort).
 
-    On Linux/macOS the daemon was installed by step_install_daemon so
-    'gateway restart' reloads it. On Windows there is no daemon, so we
-    launch the gateway directly as a detached background process.
+    On Pi the daemon was installed by step_install_daemon so we try
+    'gateway restart' first, then fall back to a direct detached launch.
+    On Windows and desktop Linux we launch directly as a detached process
+    so the gateway survives after this script exits.
     """
     exe = _find_openclaw()
     if not exe:
@@ -333,9 +346,24 @@ def step_restart_gateway() -> None:
         except Exception as exc:
             print(f"[apply_config] Could not start gateway: {exc}", file=sys.stderr)
     else:
+        # Try a graceful restart first (works when daemon is already running).
         result = subprocess.run([exe, "gateway", "restart"], check=False)
         if result.returncode != 0:
-            subprocess.Popen([exe, "gateway"], close_fds=True)
+            # Daemon not running or not installed — launch directly.
+            # start_new_session=True fully detaches from this process group so
+            # the gateway is not killed when apply_config.py (or the setup
+            # server) exits or the terminal is closed.
+            try:
+                subprocess.Popen(
+                    [exe, "gateway"],
+                    close_fds=True,
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                print("[apply_config] OpenClaw gateway launched in background.", file=sys.stderr)
+            except Exception as exc:
+                print(f"[apply_config] Could not start gateway: {exc}", file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
