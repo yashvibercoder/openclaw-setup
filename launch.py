@@ -67,18 +67,72 @@ def _fail(msg: str) -> None:
 # Step 1 — Python dependencies
 # ---------------------------------------------------------------------------
 
+def _ensure_pip() -> None:
+    """Ensure pip is available; install it if not."""
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "--version"],
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        return  # pip is already present
+
+    # Try ensurepip (built into Python >= 3.4, but may be disabled on some distros)
+    ensurepip = subprocess.run(
+        [sys.executable, "-m", "ensurepip", "--upgrade"],
+        capture_output=True,
+    )
+    if ensurepip.returncode == 0:
+        return
+
+    # On Debian/Ubuntu/Mint, ensurepip may be stripped — install via apt
+    if IS_LINUX:
+        _info("pip not found — installing python3-pip via apt-get...")
+        try:
+            subprocess.run(
+                ["sudo", "apt-get", "install", "-y", "python3-pip"],
+                check=True,
+            )
+            return
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
+
+    _fail(
+        "pip is not available and could not be installed automatically.\n"
+        "  On Debian/Ubuntu/Mint: sudo apt-get install python3-pip\n"
+        "  On Fedora/RHEL:        sudo dnf install python3-pip\n"
+        "  Then re-run this script."
+    )
+    sys.exit(1)
+
+
+def _pip_install(*packages: str) -> bool:
+    """
+    Try to install packages via pip, handling common Linux restrictions.
+    Returns True on success.
+    Attempt order:
+      1. Normal install
+      2. --break-system-packages  (PEP 668 / Ubuntu 23.04+ / Mint 22+)
+      3. --user install
+    """
+    base_cmd = [sys.executable, "-m", "pip", "install", "-q", *packages]
+    for extra in ([], ["--break-system-packages"], ["--user"]):
+        result = subprocess.run(base_cmd + extra, capture_output=True, text=True)
+        if result.returncode == 0:
+            return True
+        # Stop trying --break-system-packages / --user on non-externally-managed errors
+        if "externally-managed-environment" not in result.stderr and extra:
+            break
+    return False
+
+
 def _install_python_deps() -> None:
-    """Install flask and requests quietly; abort on failure."""
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "flask", "requests", "-q"],
-            check=True,
-        )
-    except subprocess.CalledProcessError as exc:
+    """Install flask and requests; handle pip-absent and externally-managed distros."""
+    _ensure_pip()
+    if not _pip_install("flask", "requests"):
         _fail(
             "Could not install Python dependencies (flask, requests).\n"
-            f"  pip exited with code {exc.returncode}.\n"
-            "  Try running: pip install flask requests"
+            "  Try manually: pip install flask requests\n"
+            "  Or:           pip install --user flask requests"
         )
         sys.exit(1)
     _ok("Python dependencies ready")

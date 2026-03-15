@@ -13,4 +13,11 @@ if ! command -v python3 &>/dev/null; then
     fi
 fi
 
+# Ensure pip is available even if python3 was pre-installed without it
+if ! python3 -m pip --version &>/dev/null; then
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y python3-pip
+    fi
+fi
+
 python3 launch.py
