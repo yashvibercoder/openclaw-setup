@@ -1,0 +1,14 @@
+[Unit]
+Description=OpenClaw Setup Server
+After=network.target
+ConditionPathExists=!/home/pi/.openclaw/.configured
+
+[Service]
+User=root
+ExecStart=/usr/bin/python3 /opt/openclaw-setup/setup_server.py
+Restart=on-failure
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

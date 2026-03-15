@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenClaw TUI Service
+After=openclaw-gateway.service network-online.target
+Requires=openclaw-gateway.service
+
+[Service]
+User=pi
+ExecStart=/usr/bin/openclaw
+Restart=always
+RestartSec=5
+Environment=NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+Environment=OPENCLAW_NO_RESPAWN=1
+
+[Install]
+WantedBy=multi-user.target

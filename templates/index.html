@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenClaw Setup</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e3a5f 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 48px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #1e293b;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35), 0 8px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .card-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      padding: 28px 32px 24px;
+      text-align: center;
+      color: #fff;
+    }
+    .card-header .robot-icon {
+      font-size: 2.4rem;
+      line-height: 1;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .card-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .card-header p {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+
+    /* ── Step bar ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      padding: 20px 24px 0;
+      gap: 0;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex: 0 0 auto;
+    }
+    .step-bubble {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      background: #f8fafc;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s;
+    }
+    .step-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #94a3b8;
+      white-space: nowrap;
+      transition: color 0.25s;
+    }
+    .step.active .step-bubble {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.2);
+    }
+    .step.active .step-label { color: #4f46e5; }
+    .step.done .step-bubble {
+      background: #10b981;
+      border-color: #10b981;
+      color: #fff;
+    }
+    .step.done .step-label { color: #10b981; }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: #e2e8f0;
+      margin-bottom: 18px;
+      min-width: 12px;
+      transition: background 0.25s;
+    }
+    .step-line.done { background: #10b981; }
+
+    /* ── Card body ── */
+    .card-body {
+      padding: 24px 32px 32px;
+    }
+
+    /* ── Section ── */
+    .section {
+      margin-bottom: 28px;
+    }
+    .section-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-heading .section-num {
+      width: 22px;
+      height: 22px;
+      background: #ede9fe;
+      color: #4f46e5;
+      border-radius: 50%;
+      font-size: 0.7rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Form controls ── */
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 5px;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: #f9fafb;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #6366f1;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .field-group {
+      margin-bottom: 14px;
+    }
+    .field-hint {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 5px;
+    }
+
+    /* ── Provider grid ── */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .provider-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 8px;
+      cursor: pointer;
+      text-align: center;
+      background: #f9fafb;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+    .provider-card:hover {
+      border-color: #a5b4fc;
+      background: #f0f0ff;
+    }
+    .provider-card.selected {
+      border-color: #4f46e5;
+      background: #eef2ff;
+      box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
+    }
+    .provider-icon {
+      font-size: 1.4rem;
+      line-height: 1;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .provider-name {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #374151;
+      line-height: 1.2;
+    }
+    .provider-sub {
+      font-size: 0.6rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* ── Test row ── */
+    .test-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .test-row input {
+      flex: 1;
+    }
+    .btn-test {
+      flex-shrink: 0;
+      padding: 10px 16px;
+      background: #f1f5f9;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-test:hover { background: #e2e8f0; border-color: #94a3b8; }
+    .btn-test:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Inline status ── */
+    .inline-status {
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-top: 7px;
+      min-height: 18px;
+      padding: 4px 0;
+    }
+    .inline-status.ok  { color: #059669; }
+    .inline-status.err { color: #dc2626; }
+
+    /* ── Custom URL field ── */
+    #custom-url-field { display: none; margin-top: 12px; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1.5px solid #f1f5f9;
+      margin: 6px 0 26px;
+    }
+
+    /* ── Save button ── */
+    #btn-save {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    #btn-save:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); }
+    #btn-save:active:not(:disabled) { transform: translateY(0); }
+    #btn-save:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error banner ── */
+    #error-banner {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #fef2f2;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      color: #dc2626;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    /* ── Success state ── */
+    #success-state {
+      display: none;
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .success-check {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #10b981, #34d399);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 2rem;
+      box-shadow: 0 8px 24px rgba(16,185,129,0.3);
+    }
+    #success-state h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+    #success-state p {
+      font-size: 0.88rem;
+      color: #475569;
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+    #success-bot-link {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 8px 20px;
+      background: #eef2ff;
+      border: 1.5px solid #c7d2fe;
+      border-radius: 8px;
+      color: #4f46e5;
+      font-weight: 700;
+      text-decoration: none;
+      font-size: 0.88rem;
+    }
+    #success-bot-link:hover { background: #e0e7ff; }
+    .success-note {
+      font-size: 0.72rem !important;
+      color: #94a3b8 !important;
+      margin-top: 16px !important;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 400px) {
+      .card-body { padding: 18px 18px 24px; }
+      .card-header { padding: 22px 18px 18px; }
+      .steps { padding: 16px 14px 0; }
+      .provider-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Header -->
+  <div class="card-header">
+    <span class="robot-icon">🤖</span>
+    <h1>OpenClaw Setup</h1>
+    <p>Your AI agent, ready in minutes</p>
+  </div>
+
+  <!-- Step bar -->
+  <div class="steps" id="step-bar">
+    {% if is_pi %}
+    <div class="step active" id="step-1" data-step="1">
+      <div class="step-bubble" id="bubble-1">1</div>
+      <span class="step-label">WiFi</span>
+    </div>
+    <div class="step-line" id="line-1-2"></div>
+    {% endif %}
+    <div class="step {% if not is_pi %}active{% endif %}" id="step-2" data-step="2">
+      <div class="step-bubble" id="bubble-2">{% if is_pi %}2{% else %}1{% endif %}</div>
+      <span class="step-label">AI Model</span>
+    </div>
+    <div class="step-line" id="line-2-3"></div>
+    <div class="step" id="step-3" data-step="3">
+      <div class="step-bubble" id="bubble-3">{% if is_pi %}3{% else %}2{% endif %}</div>
+      <span class="step-label">Telegram</span>
+    </div>
+    <div class="step-line" id="line-3-4"></div>
+    <div class="step" id="step-4" data-step="4">
+      <div class="step-bubble" id="bubble-4">{% if is_pi %}4{% else %}3{% endif %}</div>
+      <span class="step-label">Done</span>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="card-body" id="setup-form">
+
+    <!-- Section 1: WiFi (Pi only) -->
+    {% if is_pi %}
+    <div class="section" id="section-wifi">
+      <div class="section-heading">
+        <span class="section-num">1</span>
+        Connect to WiFi
+      </div>
+      <div class="field-group">
+        <label for="wifi-ssid">Network Name (SSID)</label>
+        <input type="text" id="wifi-ssid" name="wifi_ssid"
+               placeholder="My Home WiFi" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="field-group">
+        <label for="wifi-password">Password <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+        <input type="password" id="wifi-password" name="wifi_password"
+               placeholder="••••••••" autocomplete="new-password" />
+        <p class="field-hint">Your home WiFi network name and password</p>
+      </div>
+    </div>
+    <hr class="divider" />
+    {% endif %}
+
+    <!-- Section 2: AI Model -->
+    <div class="section" id="section-llm">
+      <div class="section-heading">
+        <span class="section-num">{% if is_pi %}2{% else %}1{% endif %}</span>
+        Choose Your AI Model
+      </div>
+
+      <div class="provider-grid" id="provider-grid">
+        <div class="provider-card selected" data-provider="gemini" tabindex="0" role="button" aria-pressed="true">
+          <span class="provider-icon">✦</span>
+          <div class="provider-name">Gemini</div>
+          <div class="provider-sub">Google</div>
+        </div>
+        <div class="provider-card" data-provider="openai" tabindex="0" role="button" aria-pressed="false">
+          <span class="provider-icon">🧠</span>
+          <div class="provider-name">OpenAI</div>
+          <div class="provider-sub">ChatGPT</div>
+        </div>
+        <div class="provider-card" data-provider="grok" tabindex="0" role="button" aria-pressed="false">
+          <span class="provider-icon">⚡</span>
+          <div class="provider-name">Grok</div>
+          <div class="provider-sub">xAI</div>
+        </div>
+        <div class="provider-card" data-provider="deepseek" tabindex="0" role="button" aria-pressed="false">
+          <span class="provider-icon">🔭</span>
+          <div class="provider-name">DeepSeek</div>
+          <div class="provider-sub">DeepSeek AI</div>
+        </div>
+        <div class="provider-card" data-provider="anthropic" tabindex="0" role="button" aria-pressed="false">
+          <span class="provider-icon">🌀</span>
+          <div class="provider-name">Anthropic</div>
+          <div class="provider-sub">Claude</div>
+        </div>
+        <div class="provider-card" data-provider="custom" tabindex="0" role="button" aria-pressed="false">
+          <span class="provider-icon">⚙️</span>
+          <div class="provider-name">Custom</div>
+          <div class="provider-sub">Other / API</div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label for="llm-api-key">API Key</label>
+        <div class="test-row">
+          <input type="text" id="llm-api-key" name="llm_api_key"
+                 placeholder="AIza..." autocomplete="off" spellcheck="false" />
+          <button type="button" class="btn-test" id="btn-test-llm">Test Key</button>
+        </div>
+        <div class="inline-status" id="llm-status"></div>
+      </div>
+
+      <div class="field-group" id="custom-url-field">
+        <label for="llm-base-url">API Base URL</label>
+        <input type="text" id="llm-base-url" name="llm_base_url"
+               placeholder="https://api.example.com" autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Section 3: Telegram -->
+    <div class="section" id="section-telegram">
+      <div class="section-heading">
+        <span class="section-num">{% if is_pi %}3{% else %}2{% endif %}</span>
+        Connect Telegram Bot
+      </div>
+      <div class="field-group">
+        <label for="telegram-token">Bot Token</label>
+        <div class="test-row">
+          <input type="text" id="telegram-token" name="telegram_token"
+                 placeholder="1234567890:ABC-DefGhiJklMnoPqrStUvWxYz"
+                 autocomplete="off" spellcheck="false" />
+          <button type="button" class="btn-test" id="btn-test-telegram">Test Bot</button>
+        </div>
+        <div class="inline-status" id="telegram-status"></div>
+        <p class="field-hint">Get your token from <strong>@BotFather</strong> on Telegram</p>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Save -->
+    <button type="button" id="btn-save">
+      <div class="spinner" id="save-spinner"></div>
+      <span id="btn-save-text">Save &amp; Start Agent</span>
+    </button>
+    <div id="error-banner" role="alert"></div>
+
+  </div><!-- /#setup-form -->
+
+  <!-- Success state -->
+  <div id="success-state">
+    <div class="success-check">✓</div>
+    <h2>Your AI agent is live! 🎉</h2>
+    <p>Open Telegram and send your bot a message to get started.</p>
+    <p id="success-bot-wrap" style="display:none">
+      <a id="success-bot-link" href="#" target="_blank"></a>
+    </p>
+    <p class="success-note">This setup page will close automatically.</p>
+  </div>
+
+</div><!-- /.card -->
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Helpers ── */
+  function qs(sel) { return document.querySelector(sel); }
+  function show(el) { if (el) el.style.display = ''; }
+  function hide(el) { if (el) el.style.display = 'none'; }
+
+  /* ── Provider placeholders ── */
+  var PLACEHOLDERS = {
+    gemini:    'AIzaSy...',
+    openai:    'sk-...',
+    grok:      'xai-...',
+    deepseek:  'sk-...',
+    anthropic: 'sk-ant-...',
+    custom:    'your-api-key'
+  };
+
+  /* ── State ── */
+  var selectedProvider = 'gemini';
+  var verifiedBotUsername = '';
+
+  /* ── Step management ── */
+  var IS_PI = {{ 'true' if is_pi else 'false' }};
+  // Steps order: on Pi = [1-wifi, 2-llm, 3-telegram, 4-done]
+  //              no Pi = [2-llm, 3-telegram, 4-done]  (we still use IDs step-2..4)
+  var stepOrder = IS_PI ? ['step-1','step-2','step-3','step-4']
+                        : ['step-2','step-3','step-4'];
+  var currentStepIndex = 0;
+
+  function setStepActive(index) {
+    stepOrder.forEach(function(id, i) {
+      var el = qs('#' + id);
+      if (!el) return;
+      el.classList.remove('active','done');
+      if (i < index) {
+        el.classList.add('done');
+        qs('#bubble-' + id.replace('step-','')) .textContent = '✓';
+      } else if (i === index) {
+        el.classList.add('active');
+      }
+    });
+    // Colour the connector lines
+    ['line-1-2','line-2-3','line-3-4'].forEach(function(lid) {
+      var line = qs('#' + lid);
+      if (!line) return;
+      // Determine which step pair this line connects
+      var parts = lid.split('-');
+      var leftStepId = 'step-' + parts[1];
+      var leftIdx = stepOrder.indexOf(leftStepId);
+      if (leftIdx !== -1 && leftIdx < index) {
+        line.classList.add('done');
+      } else {
+        line.classList.remove('done');
+      }
+    });
+  }
+
+  function advanceStep() {
+    if (currentStepIndex < stepOrder.length - 1) {
+      currentStepIndex++;
+      setStepActive(currentStepIndex);
+    }
+  }
+
+  /* ── Provider selection ── */
+  var providerCards = document.querySelectorAll('.provider-card');
+  providerCards.forEach(function(card) {
+    card.addEventListener('click', function() { selectProvider(card.dataset.provider); });
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectProvider(card.dataset.provider);
+      }
+    });
+  });
+
+  function selectProvider(name) {
+    selectedProvider = name;
+    providerCards.forEach(function(c) {
+      var selected = c.dataset.provider === name;
+      c.classList.toggle('selected', selected);
+      c.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+    var apiKeyInput = qs('#llm-api-key');
+    apiKeyInput.placeholder = PLACEHOLDERS[name] || 'your-api-key';
+    var customField = qs('#custom-url-field');
+    if (name === 'custom') {
+      show(customField);
+    } else {
+      hide(customField);
+    }
+    // Clear old status
+    setStatus('llm-status', '', '');
+  }
+
+  /* ── Inline status helper ── */
+  function setStatus(elId, type, msg) {
+    var el = qs('#' + elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'inline-status' + (type ? ' ' + type : '');
+  }
+
+  /* ── Test Telegram ── */
+  qs('#btn-test-telegram').addEventListener('click', function() {
+    var token = qs('#telegram-token').value.trim();
+    if (!token) {
+      setStatus('telegram-status', 'err', 'Please enter your bot token first.');
+      return;
+    }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Testing…';
+    setStatus('telegram-status', '', '');
+
+    fetch('/test-telegram?token=' + encodeURIComponent(token))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          verifiedBotUsername = data.bot_username || '';
+          setStatus('telegram-status', 'ok',
+            '✓ Connected as ' + (verifiedBotUsername || 'your bot'));
+          // Advance step if we are on step-3 or earlier
+          if (currentStepIndex < stepOrder.length - 2) {
+            advanceStep();
+          }
+        } else {
+          setStatus('telegram-status', 'err',
+            '✗ ' + (data.error || 'Could not connect. Check your token.'));
+        }
+      })
+      .catch(function() {
+        setStatus('telegram-status', 'err', '✗ Network error. Is the server running?');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Test Bot';
+      });
+  });
+
+  /* ── Test LLM ── */
+  qs('#btn-test-llm').addEventListener('click', function() {
+    var key = qs('#llm-api-key').value.trim();
+    if (!key) {
+      setStatus('llm-status', 'err', 'Please enter an API key first.');
+      return;
+    }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Testing…';
+    setStatus('llm-status', '', '');
+
+    var url = '/test-llm?provider=' + encodeURIComponent(selectedProvider)
+            + '&key=' + encodeURIComponent(key);
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          setStatus('llm-status', 'ok', '✓ API key is valid');
+          if (currentStepIndex < 1) {
+            advanceStep();
+          }
+        } else {
+          setStatus('llm-status', 'err',
+            '✗ ' + (data.error || 'Invalid API key or unreachable provider.'));
+        }
+      })
+      .catch(function() {
+        setStatus('llm-status', 'err', '✗ Network error. Is the server running?');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Test Key';
+      });
+  });
+
+  /* ── Advance step on WiFi input (Pi only) ── */
+  if (IS_PI) {
+    qs('#wifi-ssid').addEventListener('input', function() {
+      if (this.value.trim() && currentStepIndex === 0) {
+        advanceStep();
+      }
+    });
+  }
+
+  /* ── Save ── */
+  qs('#btn-save').addEventListener('click', function() {
+    var btn = qs('#btn-save');
+    var spinner = qs('#save-spinner');
+    var btnText = qs('#btn-save-text');
+    var errBanner = qs('#error-banner');
+
+    // Validate required fields
+    var errors = [];
+    if (IS_PI) {
+      var ssid = qs('#wifi-ssid').value.trim();
+      if (!ssid) errors.push('WiFi network name (SSID) is required.');
+    }
+    var apiKey = qs('#llm-api-key').value.trim();
+    if (!apiKey) errors.push('API key is required.');
+    var tgToken = qs('#telegram-token').value.trim();
+    if (!tgToken) errors.push('Telegram bot token is required.');
+
+    if (errors.length) {
+      errBanner.textContent = errors.join(' ');
+      show(errBanner);
+      return;
+    }
+
+    hide(errBanner);
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnText.textContent = 'Setting up…';
+
+    var payload = {
+      wifi_ssid:      IS_PI ? qs('#wifi-ssid').value.trim() : '',
+      wifi_password:  IS_PI ? qs('#wifi-password').value : '',
+      llm_provider:   selectedProvider,
+      llm_api_key:    apiKey,
+      llm_base_url:   (selectedProvider === 'custom')
+                        ? qs('#llm-base-url').value.trim() : '',
+      telegram_token: tgToken
+    };
+
+    fetch('/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          showSuccess();
+        } else {
+          var msg = data.error || data.message || 'An unknown error occurred. Please try again.';
+          errBanner.textContent = '✗ ' + msg;
+          show(errBanner);
+          btn.disabled = false;
+          spinner.style.display = 'none';
+          btnText.textContent = 'Save & Start Agent';
+        }
+      })
+      .catch(function() {
+        errBanner.textContent = '✗ Network error. Is the server running?';
+        show(errBanner);
+        btn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Save & Start Agent';
+      });
+  });
+
+  /* ── Show success state ── */
+  function showSuccess() {
+    // Mark final step done
+    currentStepIndex = stepOrder.length - 1;
+    setStepActive(currentStepIndex);
+    qs('#bubble-' + stepOrder[stepOrder.length-1].replace('step-','')).textContent = '✓';
+    var lastStepEl = qs('#' + stepOrder[stepOrder.length-1]);
+    if (lastStepEl) {
+      lastStepEl.classList.remove('active');
+      lastStepEl.classList.add('done');
+    }
+
+    hide(qs('#setup-form'));
+    var ss = qs('#success-state');
+    ss.style.display = 'block';
+
+    if (verifiedBotUsername) {
+      var username = verifiedBotUsername.replace(/^@/, '');
+      var link = qs('#success-bot-link');
+      link.textContent = 'Your bot: ' + verifiedBotUsername;
+      link.href = 'tg://resolve?domain=' + encodeURIComponent(username);
+      show(qs('#success-bot-wrap'));
+    }
+  }
+
+  /* ── Init ── */
+  setStepActive(0);
+  // Set default placeholder for initially selected provider
+  qs('#llm-api-key').placeholder = PLACEHOLDERS[selectedProvider];
+
+})();
+</script>
+
+</body>
+</html>

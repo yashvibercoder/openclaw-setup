@@ -1,0 +1,17 @@
+# Default: normalize all text files to LF in the repo
+* text=auto eol=lf
+
+# Windows-only files keep CRLF
+*.bat text eol=crlf
+
+# Explicitly mark shell scripts as LF (critical — CRLF breaks bash on Linux/Pi)
+*.sh text eol=lf
+*.command text eol=lf
+first_boot.sh text eol=lf
+hotspot_start.sh text eol=lf
+hotspot_stop.sh text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary

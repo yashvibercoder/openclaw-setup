@@ -1,0 +1,13 @@
+{
+  "llm": {
+    "provider": "PROVIDER_PLACEHOLDER",
+    "apiKey": "API_KEY_PLACEHOLDER",
+    "baseUrl": "BASE_URL_PLACEHOLDER"
+  },
+  "telegram": {
+    "botToken": "TELEGRAM_TOKEN_PLACEHOLDER"
+  },
+  "gateway": {
+    "dev": true
+  }
+}
