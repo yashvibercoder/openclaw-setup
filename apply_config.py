@@ -48,6 +48,47 @@ def _find_openclaw() -> "str | None":
         return None
     return shutil.which("openclaw")
 
+
+# ---------------------------------------------------------------------------
+# Provider mapping
+# Maps the web UI provider name to openclaw's internal identifiers.
+# ---------------------------------------------------------------------------
+
+PROVIDER_INFO: dict[str, dict] = {
+    "gemini": {
+        "provider_id": "google",
+        "profile_id":  "google:default",
+        "model":       "google/gemini-2.0-flash",
+    },
+    "openai": {
+        "provider_id": "openai",
+        "profile_id":  "openai:default",
+        "model":       "openai/gpt-4o",
+    },
+    "grok": {
+        "provider_id": "xai",
+        "profile_id":  "xai:default",
+        "model":       "xai/grok-2",
+    },
+    "deepseek": {
+        "provider_id": "deepseek",
+        "profile_id":  "deepseek:default",
+        "model":       "deepseek/deepseek-chat",
+    },
+    "anthropic": {
+        "provider_id": "anthropic",
+        "profile_id":  "anthropic:default",
+        "model":       "anthropic/claude-3-5-sonnet-20241022",
+    },
+    # custom: treat as an OpenAI-compatible endpoint
+    "custom": {
+        "provider_id": "openai",
+        "profile_id":  "openai:custom",
+        "model":       "openai/gpt-4o",
+    },
+}
+
+
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
@@ -80,48 +121,137 @@ def run_script(path: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def step_write_openclaw_config(config: dict) -> None:
-    """Step 1: Write ~/.openclaw/config.json atomically with mode 600."""
-    openclaw_dir = Path.home() / ".openclaw"
-    openclaw_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+def _write_auth_profiles(provider_id: str, profile_id: str, api_key: str) -> None:
+    """Write the API key to auth-profiles.json for the main agent.
 
-    final_path = openclaw_dir / "config.json"
-    tmp_path = openclaw_dir / ".config.json.tmp"
+    OpenClaw stores actual credentials in
+    ~/.openclaw/agents/main/agent/auth-profiles.json — separate from the
+    main openclaw.json which only holds profile metadata.
+    """
+    agents_dir = Path.home() / ".openclaw" / "agents" / "main" / "agent"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    auth_file = agents_dir / "auth-profiles.json"
 
-    payload = {
-        "llm": {
-            "provider": config["llm_provider"],
-            "apiKey": config["llm_api_key"],
-            "baseUrl": config["llm_base_url"],
-        },
-        "telegram": {
-            "botToken": config["telegram_token"],
-        },
-        "gateway": {
-            "dev": True,
-        },
+    # Load existing data, or start fresh.
+    if auth_file.exists():
+        try:
+            existing: dict = json.loads(auth_file.read_text())
+        except Exception:
+            existing = {"version": 1, "profiles": {}}
+    else:
+        existing = {"version": 1, "profiles": {}}
+
+    if "profiles" not in existing:
+        existing["profiles"] = {}
+    if "lastGood" not in existing:
+        existing["lastGood"] = {}
+
+    existing["profiles"][profile_id] = {
+        "type": "api_key",
+        "provider": provider_id,
+        "key": api_key,
     }
+    existing["lastGood"][provider_id] = profile_id
 
-    # Write to temp file first, then atomically rename.
-    tmp_fd = os.open(str(tmp_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    # Write atomically with restrictive permissions.
+    tmp_path = str(auth_file) + ".tmp"
+    tmp_fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(tmp_fd, "w") as fh:
+        json.dump(existing, fh, indent=2)
+        fh.write("\n")
+    os.replace(tmp_path, str(auth_file))
     try:
-        with os.fdopen(tmp_fd, "w") as fh:
-            json.dump(payload, fh, indent=2)
-            fh.write("\n")
-    except Exception:
-        # Ensure the fd is not leaked on unexpected errors before fdopen wraps it.
-        # fdopen takes ownership; if it succeeded the fd is already managed.
-        raise
-
-    # Atomic rename — on POSIX this is guaranteed atomic; on Windows it requires
-    # os.replace() which atomically replaces the destination.
-    os.replace(str(tmp_path), str(final_path))
-
-    # Enforce restrictive permissions (no-op on Windows but harmless).
-    try:
-        os.chmod(str(final_path), 0o600)
+        os.chmod(str(auth_file), 0o600)
     except NotImplementedError:
         pass
+
+
+def step_write_openclaw_config(config: dict) -> None:
+    """Step 1: Configure OpenClaw via its CLI and direct file writes.
+
+    Previous versions of this script incorrectly wrote to
+    ~/.openclaw/config.json with the wrong schema.  The real config file is
+    ~/.openclaw/openclaw.json and credentials live in
+    ~/.openclaw/agents/main/agent/auth-profiles.json.
+    """
+    exe = _find_openclaw()
+    if not exe:
+        raise RuntimeError(
+            "openclaw executable not found. "
+            "Make sure OpenClaw was installed successfully and is on PATH."
+        )
+
+    llm_provider   = config["llm_provider"]
+    llm_api_key    = config["llm_api_key"]
+    llm_base_url   = config.get("llm_base_url") or ""
+    telegram_token = config["telegram_token"]
+
+    info = PROVIDER_INFO.get(llm_provider)
+    if not info:
+        raise RuntimeError(f"Unknown LLM provider: {llm_provider!r}")
+
+    provider_id = info["provider_id"]
+    profile_id  = info["profile_id"]
+    model       = info["model"]
+
+    # ── 1. Bootstrap openclaw.json if it does not exist yet ────────────────
+    openclaw_json = Path.home() / ".openclaw" / "openclaw.json"
+    if not openclaw_json.exists():
+        print("[apply_config] Initialising openclaw config...", file=sys.stderr)
+        subprocess.run(
+            [
+                exe, "setup", "--non-interactive",
+                "--workspace", str(Path.home() / ".openclaw" / "workspace"),
+            ],
+            check=False,  # best-effort; the file may be created mid-run
+        )
+
+    # ── 2. Configure Telegram via the channels CLI ─────────────────────────
+    print("[apply_config] Configuring Telegram channel...", file=sys.stderr)
+    subprocess.run(
+        [exe, "channels", "add", "--channel", "telegram", "--token", telegram_token],
+        check=True,
+    )
+
+    # ── 3. Set the primary model ────────────────────────────────────────────
+    print(f"[apply_config] Setting primary model to {model!r}...", file=sys.stderr)
+    subprocess.run(
+        [exe, "config", "set", "agents.defaults.model.primary", model],
+        check=True,
+    )
+
+    # ── 4. Declare the auth-profile metadata in openclaw.json ──────────────
+    #   openclaw.json only stores the profile type; the key itself lives in
+    #   auth-profiles.json (written in step 5).
+    print(
+        f"[apply_config] Registering auth profile {profile_id!r}...",
+        file=sys.stderr,
+    )
+    subprocess.run(
+        [exe, "config", "set", f"auth.profiles.{profile_id}.provider", provider_id],
+        check=True,
+    )
+    subprocess.run(
+        [exe, "config", "set", f"auth.profiles.{profile_id}.mode", "api_key"],
+        check=True,
+    )
+
+    # ── 5. Write the API key to auth-profiles.json ─────────────────────────
+    print("[apply_config] Writing API key to auth-profiles.json...", file=sys.stderr)
+    _write_auth_profiles(provider_id, profile_id, llm_api_key)
+
+    # ── 6. Custom provider: persist the base URL in the agent model config ─
+    if llm_provider == "custom" and llm_base_url:
+        print(
+            f"[apply_config] Setting custom base URL {llm_base_url!r}...",
+            file=sys.stderr,
+        )
+        # Store the custom base URL so the gateway knows where to send requests.
+        subprocess.run(
+            [exe, "config", "set", "agents.defaults.models.openai/gpt-4o.baseUrl",
+             llm_base_url],
+            check=False,  # best-effort; key path may differ across versions
+        )
 
 
 def step_configure_wifi(config: dict) -> None:
@@ -382,8 +512,6 @@ def main() -> None:
 
     # Validate required keys are present (without echoing their values).
     required_keys = [
-        "wifi_ssid",
-        "wifi_password",
         "llm_provider",
         "llm_api_key",
         "llm_base_url",
@@ -394,7 +522,12 @@ def main() -> None:
             _fail("validate_input", f"Missing required field: {key}")
             return
 
-    # ---- Step 1: Write ~/.openclaw/config.json ----
+    # wifi_ssid / wifi_password are optional (only required on Pi, validated
+    # in setup_server.py before this script is called).
+    config.setdefault("wifi_ssid", "")
+    config.setdefault("wifi_password", "")
+
+    # ---- Step 1: Configure OpenClaw (model, Telegram, API key) ----
     try:
         step_write_openclaw_config(config)
     except Exception as exc:

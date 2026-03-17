@@ -105,7 +105,7 @@ def _run_apply_config(payload: dict) -> tuple[bool, str]:
     """
     try:
         result = subprocess.run(
-            ["python3", APPLY_CONFIG_PATH],
+            [sys.executable, APPLY_CONFIG_PATH],
             input=json.dumps(payload),
             capture_output=True,
             text=True,

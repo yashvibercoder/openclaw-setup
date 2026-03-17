@@ -449,10 +449,6 @@ def _ensure_openclaw() -> None:
     try:
         subprocess.run([npm_exe, "install", "-g", "openclaw"], check=True)
     except subprocess.CalledProcessError as exc:
-        _fail(f"npm install -g openclaw failed (exit {exc.returncode}).\n"
-              "  Check your internet connection and try again.")
-        sys.exit(1)
-    except subprocess.CalledProcessError as exc:
         _fail(
             f"npm install -g openclaw failed (exit {exc.returncode}).\n"
             "  Check your internet connection and try again."
