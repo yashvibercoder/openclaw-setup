@@ -27,17 +27,44 @@ else
 fi
 
 print_info "Installing OpenClaw globally..."
-sudo npm install -g openclaw
-print_ok "OpenClaw installed."
+if sudo npm install -g openclaw; then
+    print_ok "OpenClaw installed."
+else
+    print_error "npm install -g openclaw failed. Check your internet connection and try again."
+    exit 1
+fi
+
+# Verify openclaw is reachable after install
+if ! command -v openclaw &>/dev/null; then
+    print_error "openclaw not found on PATH after install. Try: hash -r && openclaw --version"
+    exit 1
+fi
+print_ok "openclaw is on PATH: $(command -v openclaw)"
 
 print_info "Installing Flask and requests..."
-pip3 install flask requests
-print_ok "Flask and requests installed."
+# Ubuntu 23.04+, Debian 12+, and Mint 22+ mark Python as externally managed
+# (PEP 668). Try progressively more permissive install modes.
+if pip3 install flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (standard pip)."
+elif pip3 install --break-system-packages flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (--break-system-packages)."
+elif pip3 install --user flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (--user)."
+else
+    print_error "Could not install Flask and requests. Try: sudo pip3 install --break-system-packages flask requests"
+    exit 1
+fi
 
 print_info "Setting up /opt/openclaw-setup..."
+# Resolve the repo root from this script's real location so the copy is
+# correct regardless of the caller's working directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 sudo mkdir -p /opt/openclaw-setup
-sudo cp -r "$(dirname "$0")"/../* /opt/openclaw-setup/
-sudo chmod +x /opt/openclaw-setup/*.sh
+sudo rsync -a --delete "${REPO_ROOT}/" /opt/openclaw-setup/ 2>/dev/null || \
+    sudo cp -r "${REPO_ROOT}/." /opt/openclaw-setup/
+sudo find /opt/openclaw-setup -maxdepth 1 -name '*.sh' -exec chmod +x {} \;
+sudo find /opt/openclaw-setup/installers -name '*.sh' -exec chmod +x {} \; 2>/dev/null || true
 print_ok "Setup files copied."
 
 print_info "Setting up Node.js compile cache..."

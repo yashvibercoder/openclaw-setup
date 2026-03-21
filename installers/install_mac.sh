@@ -32,16 +32,41 @@ else
 fi
 
 print_info "Installing OpenClaw globally..."
-npm install -g openclaw
-print_ok "OpenClaw installed."
+if npm install -g openclaw; then
+    print_ok "OpenClaw installed."
+else
+    print_error "npm install -g openclaw failed. Check your internet connection and try again."
+    exit 1
+fi
+
+# Verify openclaw is reachable (it may not expose --version, so just confirm the binary exists)
+if ! command -v openclaw &>/dev/null; then
+    print_error "openclaw binary not found on PATH after install. Try opening a new terminal."
+    exit 1
+fi
+print_ok "openclaw is on PATH: $(command -v openclaw)"
 
 print_info "Installing Flask and requests..."
-pip3 install flask requests
-print_ok "Flask and requests installed."
+# macOS Homebrew Python and system Python 3.12+ are externally managed (PEP 668).
+if pip3 install flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (standard pip)."
+elif pip3 install --break-system-packages flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (--break-system-packages)."
+elif pip3 install --user flask requests 2>/dev/null; then
+    print_ok "Flask and requests installed (--user)."
+else
+    print_error "Could not install Flask and requests. Try: pip3 install --break-system-packages flask requests"
+    exit 1
+fi
 
 print_info "Setting up /opt/openclaw-setup..."
+# Resolve the repo root relative to this script's real location, not the
+# caller's working directory, so the copy works regardless of how it is invoked.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 sudo mkdir -p /opt/openclaw-setup
-sudo cp -r "$(dirname "$0")"/../* /opt/openclaw-setup/
+sudo rsync -a --delete "${REPO_ROOT}/" /opt/openclaw-setup/ 2>/dev/null || \
+    sudo cp -r "${REPO_ROOT}/." /opt/openclaw-setup/
 print_ok "Setup files copied."
 
 print_info "Setting up Node.js compile cache..."

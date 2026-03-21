@@ -200,9 +200,20 @@ step_5_openclaw() {
 step_6_python_deps() {
     section "Step 6/15 — Install Python dependencies (Flask, requests)"
 
-    pip3 install flask requests
-
-    log "Flask and requests installed."
+    # Pi OS Bookworm (Debian 12) and later mark the system Python as
+    # "externally managed" (PEP 668), which blocks plain pip3 install.
+    # Try the most permissive flag first, then fall back gracefully.
+    if pip3 install flask requests 2>/dev/null; then
+        log "Flask and requests installed (standard pip)."
+    elif pip3 install --break-system-packages flask requests 2>/dev/null; then
+        log "Flask and requests installed (--break-system-packages)."
+    elif pip3 install --user flask requests 2>/dev/null; then
+        log "Flask and requests installed (--user)."
+    else
+        error "Could not install Flask and requests via pip3."
+        error "Try manually: sudo pip3 install --break-system-packages flask requests"
+        exit 1
+    fi
 }
 
 # =============================================================================

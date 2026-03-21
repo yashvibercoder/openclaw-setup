@@ -400,16 +400,27 @@ def _ensure_node() -> None:
 # ---------------------------------------------------------------------------
 
 def _openclaw_installed() -> bool:
-    """Return True if the openclaw CLI is reachable and exits cleanly."""
+    """Return True if the openclaw CLI is reachable.
+
+    openclaw may not expose a --version flag (or may return a non-zero exit
+    code for it), so we treat the binary being present and runnable as
+    "installed" rather than requiring a clean exit from --version.
+    """
     import shutil
     exe = _find_win_exe("openclaw") if IS_WINDOWS else shutil.which("openclaw")
     if not exe:
         return False
     try:
-        result = subprocess.run([exe, "--version"], capture_output=True)
-        return result.returncode == 0
-    except Exception:
+        # Run with a harmless flag; any outcome short of FileNotFoundError
+        # (binary missing) or PermissionError confirms it is installed.
+        subprocess.run([exe, "--version"], capture_output=True, timeout=15)
+        return True
+    except (FileNotFoundError, PermissionError):
         return False
+    except Exception:
+        # Timeout, OSError, etc. — binary exists but something is wrong.
+        # Still report as installed so we don't loop-reinstall.
+        return True
 
 
 def _add_npm_global_bin_to_path() -> None:

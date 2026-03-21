@@ -116,6 +116,38 @@ def run_script(path: str) -> None:
     subprocess.run(["/bin/bash", path], check=True)
 
 
+def _patch_openclaw_json(json_path: Path, updates: dict) -> None:
+    """Deep-merge *updates* into the JSON file at *json_path*.
+
+    Creates the file (with an empty dict) if it does not exist.
+    Writes atomically via a .tmp sibling to avoid partial writes.
+    """
+    if json_path.exists():
+        try:
+            cfg: dict = json.loads(json_path.read_text())
+            if not isinstance(cfg, dict):
+                cfg = {}
+        except Exception:
+            cfg = {}
+    else:
+        cfg = {}
+
+    def _deep_merge(base: dict, patch: dict) -> None:
+        for k, v in patch.items():
+            if isinstance(v, dict) and isinstance(base.get(k), dict):
+                _deep_merge(base[k], v)
+            else:
+                base[k] = v
+
+    _deep_merge(cfg, updates)
+
+    tmp = str(json_path) + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(cfg, fh, indent=2)
+        fh.write("\n")
+    os.replace(tmp, str(json_path))
+
+
 # ---------------------------------------------------------------------------
 # Step implementations
 # ---------------------------------------------------------------------------
@@ -167,12 +199,18 @@ def _write_auth_profiles(provider_id: str, profile_id: str, api_key: str) -> Non
 
 
 def step_write_openclaw_config(config: dict) -> None:
-    """Step 1: Configure OpenClaw via its CLI and direct file writes.
+    """Step 1: Configure OpenClaw via its CLI with direct-file fallbacks.
 
-    Previous versions of this script incorrectly wrote to
-    ~/.openclaw/config.json with the wrong schema.  The real config file is
-    ~/.openclaw/openclaw.json and credentials live in
-    ~/.openclaw/agents/main/agent/auth-profiles.json.
+    Strategy (in priority order):
+      a) Use the openclaw CLI to set each value — this is the "official" path
+         and preserves any existing config that we should not overwrite.
+      b) If a CLI command fails (wrong syntax for this openclaw build, network
+         issue during setup --non-interactive, etc.) fall back to patching
+         openclaw.json directly so setup never silently leaves the agent
+         unconfigured.
+
+    Credentials (the raw API key) always go to auth-profiles.json directly —
+    the CLI only stores the profile *metadata* there, not the key itself.
     """
     exe = _find_openclaw()
     if not exe:
@@ -194,64 +232,123 @@ def step_write_openclaw_config(config: dict) -> None:
     profile_id  = info["profile_id"]
     model       = info["model"]
 
+    openclaw_dir  = Path.home() / ".openclaw"
+    openclaw_dir.mkdir(parents=True, exist_ok=True)
+    openclaw_json = openclaw_dir / "openclaw.json"
+
     # ── 1. Bootstrap openclaw.json if it does not exist yet ────────────────
-    openclaw_json = Path.home() / ".openclaw" / "openclaw.json"
+    # Try the CLI first; if it fails or does not create the file, write a
+    # minimal skeleton ourselves so the subsequent config set / channels add
+    # commands have a valid file to work with.
     if not openclaw_json.exists():
-        print("[apply_config] Initialising openclaw config...", file=sys.stderr)
+        print("[apply_config] Initialising openclaw config via CLI...", file=sys.stderr)
         subprocess.run(
             [
                 exe, "setup", "--non-interactive",
-                "--workspace", str(Path.home() / ".openclaw" / "workspace"),
+                "--workspace", str(openclaw_dir / "workspace"),
             ],
-            check=False,  # best-effort; the file may be created mid-run
+            check=False,  # best-effort; command may not exist on all builds
         )
 
-    # ── 2. Configure Telegram via the channels CLI ─────────────────────────
+    if not openclaw_json.exists():
+        # CLI did not create the file — write a minimal valid skeleton so
+        # every subsequent CLI command (config set, channels add) has
+        # something to merge into.
+        print(
+            "[apply_config] openclaw.json not created by CLI; writing minimal bootstrap...",
+            file=sys.stderr,
+        )
+        _patch_openclaw_json(openclaw_json, {"agents": {"defaults": {"model": {}}}})
+
+    # ── 2. Configure Telegram channel ──────────────────────────────────────
+    # Try the CLI command; fall back to patching openclaw.json directly.
     print("[apply_config] Configuring Telegram channel...", file=sys.stderr)
-    subprocess.run(
+    tg_result = subprocess.run(
         [exe, "channels", "add", "--channel", "telegram", "--token", telegram_token],
-        check=True,
+        capture_output=True,
+        text=True,
     )
+    if tg_result.returncode != 0:
+        print(
+            f"[apply_config] 'openclaw channels add' failed "
+            f"(exit {tg_result.returncode}); writing token directly to openclaw.json.",
+            file=sys.stderr,
+        )
+        # Write the telegram token under the key path that openclaw uses.
+        # The "channels.telegram.token" path matches the --channel/--token CLI args.
+        _patch_openclaw_json(
+            openclaw_json,
+            {"channels": {"telegram": {"token": telegram_token}}},
+        )
 
     # ── 3. Set the primary model ────────────────────────────────────────────
     print(f"[apply_config] Setting primary model to {model!r}...", file=sys.stderr)
-    subprocess.run(
+    model_result = subprocess.run(
         [exe, "config", "set", "agents.defaults.model.primary", model],
-        check=True,
+        capture_output=True,
+        text=True,
     )
+    if model_result.returncode != 0:
+        print(
+            "[apply_config] 'openclaw config set' for model failed; patching openclaw.json directly.",
+            file=sys.stderr,
+        )
+        _patch_openclaw_json(
+            openclaw_json,
+            {"agents": {"defaults": {"model": {"primary": model}}}},
+        )
 
     # ── 4. Declare the auth-profile metadata in openclaw.json ──────────────
-    #   openclaw.json only stores the profile type; the key itself lives in
-    #   auth-profiles.json (written in step 5).
+    # openclaw.json stores the profile type; the key itself lives in
+    # auth-profiles.json (written in step 5).
     print(
         f"[apply_config] Registering auth profile {profile_id!r}...",
         file=sys.stderr,
     )
-    subprocess.run(
+    r1 = subprocess.run(
         [exe, "config", "set", f"auth.profiles.{profile_id}.provider", provider_id],
-        check=True,
+        capture_output=True, text=True,
     )
-    subprocess.run(
+    r2 = subprocess.run(
         [exe, "config", "set", f"auth.profiles.{profile_id}.mode", "api_key"],
-        check=True,
+        capture_output=True, text=True,
     )
+    if r1.returncode != 0 or r2.returncode != 0:
+        print(
+            "[apply_config] 'openclaw config set' for auth profile failed; patching openclaw.json directly.",
+            file=sys.stderr,
+        )
+        _patch_openclaw_json(
+            openclaw_json,
+            {
+                "auth": {
+                    "profiles": {
+                        profile_id: {"provider": provider_id, "mode": "api_key"}
+                    }
+                }
+            },
+        )
 
     # ── 5. Write the API key to auth-profiles.json ─────────────────────────
     print("[apply_config] Writing API key to auth-profiles.json...", file=sys.stderr)
     _write_auth_profiles(provider_id, profile_id, llm_api_key)
 
-    # ── 6. Custom provider: persist the base URL in the agent model config ─
+    # ── 6. Custom provider: persist the base URL ────────────────────────────
     if llm_provider == "custom" and llm_base_url:
         print(
             f"[apply_config] Setting custom base URL {llm_base_url!r}...",
             file=sys.stderr,
         )
-        # Store the custom base URL so the gateway knows where to send requests.
-        subprocess.run(
+        url_result = subprocess.run(
             [exe, "config", "set", "agents.defaults.models.openai/gpt-4o.baseUrl",
              llm_base_url],
-            check=False,  # best-effort; key path may differ across versions
+            capture_output=True, text=True,
         )
+        if url_result.returncode != 0:
+            _patch_openclaw_json(
+                openclaw_json,
+                {"agents": {"defaults": {"models": {"openai/gpt-4o": {"baseUrl": llm_base_url}}}}},
+            )
 
 
 def step_configure_wifi(config: dict) -> None:

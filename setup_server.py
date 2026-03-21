@@ -102,6 +102,12 @@ def _run_apply_config(payload: dict) -> tuple[bool, str]:
     Returns (success: bool, message: str).
     The subprocess is invoked with a list — never a shell string — to prevent
     shell-injection attacks.
+
+    apply_config.py writes a JSON result to stdout:
+        success → {"ok": true,  "doctor_output": "..."}
+        failure → {"ok": false, "error": "...", "step": "..."}
+    and mirrors the ok/fail status via its exit code (0 / 1).
+    We parse stdout for a human-readable error so the UI can display it.
     """
     try:
         result = subprocess.run(
@@ -109,21 +115,42 @@ def _run_apply_config(payload: dict) -> tuple[bool, str]:
             input=json.dumps(payload),
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=180,
         )
     except FileNotFoundError:
         return False, f"apply_config.py not found at {APPLY_CONFIG_PATH}."
     except subprocess.TimeoutExpired:
-        return False, "apply_config.py timed out after 120 seconds."
+        return False, "apply_config.py timed out after 3 minutes."
 
     if result.returncode != 0:
-        # Surface stderr but never echo back the raw payload (may contain keys).
-        stderr_snippet = (result.stderr or "").strip()[:400]
+        # Try to extract a human-readable error from the JSON written to stdout.
+        error_detail = ""
+        try:
+            out_json = json.loads((result.stdout or "").strip())
+            if not out_json.get("ok", True):
+                step = out_json.get("step", "")
+                msg  = out_json.get("error", "")
+                error_detail = f"[{step}] {msg}".strip("[] ") if step else msg
+        except Exception:
+            pass
+
+        # Fall back to the last non-empty line of stderr (progress messages).
+        if not error_detail:
+            stderr_lines = [
+                ln.strip() for ln in (result.stderr or "").splitlines()
+                if ln.strip() and not ln.startswith("[apply_config]")
+            ]
+            error_detail = stderr_lines[-1] if stderr_lines else ""
+
+        if not error_detail:
+            stderr_snippet = (result.stderr or "").strip()[:300]
+            error_detail = stderr_snippet or "no error details available"
+
         print(
-            f"[setup_server] apply_config exited {result.returncode}: {stderr_snippet}",
+            f"[setup_server] apply_config exited {result.returncode}: {error_detail}",
             file=sys.stderr,
         )
-        return False, f"apply_config failed (exit {result.returncode}): {stderr_snippet or 'no error output'}"
+        return False, f"Setup failed (step failed): {error_detail}"
 
     return True, "Setup complete"
 
