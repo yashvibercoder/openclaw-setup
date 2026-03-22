@@ -10,8 +10,8 @@ sudo apt update
 
 print_info "Checking Node.js..."
 if ! command -v node &> /dev/null || [ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 22 ]; then
-    print_info "Installing Node.js 24.x via NodeSource..."
-    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    print_info "Installing Node.js 22.x via NodeSource..."
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
     sudo apt install -y nodejs
 else
     print_ok "Node.js (>= 22) is already installed: $(node --version)"

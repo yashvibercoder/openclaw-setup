@@ -146,8 +146,8 @@ step_3_dependencies() {
 step_4_nodejs() {
     section "Step 4/15 — Install Node.js >= ${REQUIRED_NODE_MAJOR} (NodeSource)"
 
-    log "Fetching NodeSource setup script for Node.js 24.x..."
-    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+    log "Fetching NodeSource setup script for Node.js 22.x..."
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 
     log "Installing Node.js..."
     apt-get install -y nodejs
