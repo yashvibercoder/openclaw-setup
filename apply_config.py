@@ -260,7 +260,7 @@ def step_write_openclaw_config(config: dict) -> None:
 
     provider_id = info["provider_id"]
     profile_id  = info["profile_id"]
-    model       = info["model"]
+    model       = config.get("llm_model", "").strip() or info["model"]
 
     openclaw_dir  = Path.home() / ".openclaw"
     openclaw_dir.mkdir(parents=True, exist_ok=True)
@@ -270,6 +270,7 @@ def step_write_openclaw_config(config: dict) -> None:
     # Gateway bind mode: Pi setups need LAN access; others use auto (loopback
     # with fallback to all-interfaces), which is safe for initial setup.
     bind_mode = "lan" if IS_PI else "auto"
+    gateway_token = "openclaw123"
 
     # ── 0. Bootstrap openclaw.json if it does not exist yet ────────────────
     # Write a *complete* skeleton covering all required sections so the
@@ -307,12 +308,12 @@ def step_write_openclaw_config(config: dict) -> None:
                 "port": 18789,
                 "mode": "local",
                 "bind": bind_mode,
-                "auth": {"mode": "none"},
+                "auth": {"mode": "token", "token": gateway_token},
             },
             "commands": {
                 "native": "auto",
                 "nativeSkills": "auto",
-                "restart": True,
+                "restart": False,
             },
         })
 
@@ -431,7 +432,8 @@ def step_write_openclaw_config(config: dict) -> None:
         [exe, "config", "set", "gateway.port", "18789"],
         [exe, "config", "set", "gateway.mode", "local"],
         [exe, "config", "set", "gateway.bind", bind_mode],
-        [exe, "config", "set", "gateway.auth.mode", "none"],
+        [exe, "config", "set", "gateway.auth.mode", "token"],
+        [exe, "config", "set", "gateway.auth.token", gateway_token],
     ]
     gw_any_failed = False
     for cmd in gw_cmds:
@@ -455,7 +457,7 @@ def step_write_openclaw_config(config: dict) -> None:
                     "port": 18789,
                     "mode": "local",
                     "bind": bind_mode,
-                    "auth": {"mode": "none"},
+                    "auth": {"mode": "token", "token": gateway_token},
                 }
             },
         )

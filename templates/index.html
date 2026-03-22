@@ -256,6 +256,33 @@
     .inline-status.ok  { color: #059669; }
     .inline-status.err { color: #dc2626; }
 
+    /* ── Model selector ── */
+    .model-select-wrap {
+      margin-bottom: 14px;
+    }
+    #llm-model-select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: #f9fafb;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    #llm-model-select:focus {
+      border-color: #6366f1;
+      background-color: #fff;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+
     /* ── Custom URL field ── */
     #custom-url-field { display: none; margin-top: 12px; }
 
@@ -361,6 +388,235 @@
       color: #94a3b8 !important;
       margin-top: 16px !important;
     }
+
+    /* ── Dashboard (already configured) ── */
+    #dashboard {
+      display: none;
+      padding: 32px 32px 36px;
+      text-align: center;
+    }
+    .dash-icon {
+      font-size: 2.6rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+    #dashboard h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    #dashboard .dash-sub {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+    .dash-card {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+    }
+    .dash-card-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .dash-card-value {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .dash-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .dash-badge.running { background: #d1fae5; color: #065f46; }
+    .dash-badge.stopped { background: #fee2e2; color: #991b1b; }
+    .dash-badge.checking { background: #f1f5f9; color: #64748b; }
+    .dash-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .dash-btn {
+      flex: 1;
+      padding: 11px;
+      border-radius: 9px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .dash-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .dash-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .dash-btn.primary {
+      background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+      color: #fff;
+    }
+    .dash-btn.secondary {
+      background: #f1f5f9;
+      border: 1.5px solid #e2e8f0;
+      color: #374151;
+    }
+    #dash-gateway-msg {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      min-height: 16px;
+    }
+    #dash-gateway-msg.ok { color: #059669; }
+    #dash-gateway-msg.err { color: #dc2626; }
+
+    /* ── Pairing section ── */
+    .pairing-section {
+      margin-top: 20px;
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-radius: 10px;
+      padding: 16px 18px;
+      text-align: left;
+    }
+    .pairing-section h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pairing-section p {
+      font-size: 0.78rem;
+      color: #78350f;
+      margin-bottom: 12px;
+    }
+    .pairing-requests {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .pairing-request-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border: 1.5px solid #fde68a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+    }
+    .pairing-request-row .req-name {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .pairing-request-row .req-code {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
+    .btn-approve {
+      padding: 5px 14px;
+      background: #10b981;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-approve:hover { opacity: 0.85; }
+    .btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pairing-manual {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .pairing-manual input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1.5px solid #fde68a;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      background: #fff;
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .pairing-manual input:focus {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+    }
+    .pairing-manual button {
+      padding: 8px 16px;
+      background: #f59e0b;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+    .pairing-manual button:hover { opacity: 0.88; }
+    .pairing-manual button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pairing-msg {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      min-height: 16px;
+    }
+    .pairing-msg.ok { color: #059669; }
+    .pairing-msg.err { color: #dc2626; }
+
+    /* ── Gateway button ── */
+    #btn-gateway {
+      margin-top: 18px;
+      padding: 11px 28px;
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    #btn-gateway:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    #btn-gateway:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    #gateway-status {
+      margin-top: 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      min-height: 18px;
+    }
+    #gateway-status.ok  { color: #059669; }
+    #gateway-status.err { color: #dc2626; }
+    #gateway-status.info { color: #0ea5e9; }
 
     /* ── Responsive ── */
     @media (max-width: 400px) {
@@ -472,6 +728,11 @@
         </div>
       </div>
 
+      <div class="model-select-wrap field-group">
+        <label for="llm-model-select">Model</label>
+        <select id="llm-model-select"></select>
+      </div>
+
       <div class="field-group">
         <label for="llm-api-key">API Key</label>
         <div class="test-row">
@@ -529,7 +790,78 @@
     <p id="success-bot-wrap" style="display:none">
       <a id="success-bot-link" href="#" target="_blank"></a>
     </p>
-    <p class="success-note">This setup page will close automatically.</p>
+    <p class="success-note">Send your bot a message on Telegram, then approve it below.</p>
+    <div>
+      <button type="button" id="btn-gateway">
+        <span id="btn-gateway-text">▶ Start Gateway</span>
+      </button>
+      <div id="gateway-status"></div>
+    </div>
+
+    <div class="pairing-section" id="success-pairing-section" style="margin-top:20px">
+      <h3>🔑 Approve Telegram Access</h3>
+      <p>Message your bot on Telegram — it will send you a pairing code. Enter it here to approve.</p>
+      <div class="pairing-requests" id="success-pairing-requests"></div>
+      <div class="pairing-manual">
+        <input type="text" id="success-pairing-code" placeholder="e.g. DN397WCD" maxlength="10" />
+        <button id="success-btn-approve">Approve</button>
+      </div>
+      <div class="pairing-msg" id="success-pairing-msg"></div>
+    </div>
+  </div>
+
+  <!-- Dashboard (shown when already configured) -->
+  <div id="dashboard">
+    <span class="dash-icon">🤖</span>
+    <h2>OpenClaw is configured</h2>
+    <p class="dash-sub">Your agent is ready. Manage it below.</p>
+
+    <div class="dash-card">
+      <div>
+        <div class="dash-card-label">Model</div>
+        <div class="dash-card-value" id="dash-model">{{ existing.get('model', '—') }}</div>
+      </div>
+    </div>
+
+    <div class="dash-card">
+      <div>
+        <div class="dash-card-label">Telegram</div>
+        <div class="dash-card-value">
+          {% if existing.get('bot_token_set') %}Bot token configured{% else %}Not configured{% endif %}
+        </div>
+      </div>
+      {% if existing.get('telegram_enabled') %}
+      <span class="dash-badge running">● Active</span>
+      {% else %}
+      <span class="dash-badge stopped">● Inactive</span>
+      {% endif %}
+    </div>
+
+    <div class="dash-card">
+      <div>
+        <div class="dash-card-label">Gateway</div>
+        <div class="dash-card-value">OpenClaw Gateway</div>
+      </div>
+      <span class="dash-badge checking" id="dash-gateway-badge">Checking…</span>
+    </div>
+
+    <div id="dash-gateway-msg"></div>
+
+    <div class="dash-actions">
+      <button class="dash-btn primary" id="dash-btn-gateway">▶ Start Gateway</button>
+      <button class="dash-btn secondary" id="dash-btn-reconfigure">Reconfigure</button>
+    </div>
+
+    <div class="pairing-section" id="dash-pairing-section" style="display:none">
+      <h3>🔑 Telegram Pairing Requests</h3>
+      <p>Someone messaged your bot and needs approval to use it.</p>
+      <div class="pairing-requests" id="dash-pairing-requests"></div>
+      <div class="pairing-manual">
+        <input type="text" id="dash-pairing-code" placeholder="Enter code manually" maxlength="10" />
+        <button id="dash-btn-approve-manual">Approve</button>
+      </div>
+      <div class="pairing-msg" id="dash-pairing-msg"></div>
+    </div>
   </div>
 
 </div><!-- /.card -->
@@ -542,6 +874,42 @@
   function qs(sel) { return document.querySelector(sel); }
   function show(el) { if (el) el.style.display = ''; }
   function hide(el) { if (el) el.style.display = 'none'; }
+
+  /* ── Models per provider ── */
+  var MODELS = {
+    gemini: [
+      { id: 'google/gemini-2.0-flash-lite',  label: 'Gemini 2.0 Flash Lite (Free)' },
+      { id: 'google/gemini-1.5-flash',        label: 'Gemini 1.5 Flash (Free)' },
+      { id: 'google/gemini-1.5-pro',          label: 'Gemini 1.5 Pro' },
+      { id: 'google/gemini-2.5-pro',          label: 'Gemini 2.5 Pro' },
+      { id: 'google/gemini-2.0-flash',        label: 'Gemini 2.0 Flash' },
+    ],
+    openai: [
+      { id: 'openai/gpt-4o-mini',   label: 'GPT-4o Mini' },
+      { id: 'openai/gpt-4o',        label: 'GPT-4o' },
+      { id: 'openai/gpt-4-turbo',   label: 'GPT-4 Turbo' },
+      { id: 'openai/o1-mini',       label: 'O1 Mini' },
+      { id: 'openai/o1',            label: 'O1' },
+    ],
+    grok: [
+      { id: 'xai/grok-2-mini', label: 'Grok 2 Mini' },
+      { id: 'xai/grok-2',      label: 'Grok 2' },
+      { id: 'xai/grok-3',      label: 'Grok 3' },
+    ],
+    deepseek: [
+      { id: 'deepseek/deepseek-chat',      label: 'DeepSeek Chat (V3)' },
+      { id: 'deepseek/deepseek-reasoner',  label: 'DeepSeek Reasoner (R1)' },
+    ],
+    anthropic: [
+      { id: 'anthropic/claude-haiku-4-5',          label: 'Claude Haiku 4.5 (Fastest)' },
+      { id: 'anthropic/claude-sonnet-4-6',         label: 'Claude Sonnet 4.6' },
+      { id: 'anthropic/claude-opus-4-6',           label: 'Claude Opus 4.6' },
+      { id: 'anthropic/claude-3-5-sonnet-20241022',label: 'Claude 3.5 Sonnet' },
+    ],
+    custom: [
+      { id: 'openai/gpt-4o', label: 'Default (gpt-4o compatible)' },
+    ],
+  };
 
   /* ── Provider placeholders ── */
   var PLACEHOLDERS = {
@@ -627,6 +995,17 @@
     } else {
       hide(customField);
     }
+    // Populate model dropdown
+    var sel = qs('#llm-model-select');
+    sel.innerHTML = '';
+    var models = MODELS[name] || [];
+    models.forEach(function(m, i) {
+      var opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.label;
+      if (i === 0) opt.selected = true;
+      sel.appendChild(opt);
+    });
     // Clear old status
     setStatus('llm-status', '', '');
   }
@@ -755,6 +1134,7 @@
       wifi_ssid:      IS_PI ? qs('#wifi-ssid').value.trim() : '',
       wifi_password:  IS_PI ? qs('#wifi-password').value : '',
       llm_provider:   selectedProvider,
+      llm_model:      qs('#llm-model-select').value,
       llm_api_key:    apiKey,
       llm_base_url:   (selectedProvider === 'custom')
                         ? qs('#llm-base-url').value.trim() : '',
@@ -803,6 +1183,16 @@
     hide(qs('#setup-form'));
     var ss = qs('#success-state');
     ss.style.display = 'block';
+    checkGatewayStatus();
+    loadPairingRequests(qs('#success-pairing-requests'), qs('#success-pairing-section'), qs('#success-pairing-code'));
+
+    qs('#success-btn-approve').addEventListener('click', function() {
+      var code = qs('#success-pairing-code').value.trim().toUpperCase();
+      approvePairingCode(code, qs('#success-pairing-msg'), this, qs('#success-pairing-requests'), qs('#success-pairing-section'), qs('#success-pairing-code'));
+    });
+    qs('#success-pairing-code').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') qs('#success-btn-approve').click();
+    });
 
     if (verifiedBotUsername) {
       var username = verifiedBotUsername.replace(/^@/, '');
@@ -813,10 +1203,252 @@
     }
   }
 
+  /* ── Gateway button ── */
+  function setGatewayStatus(type, msg) {
+    var el = qs('#gateway-status');
+    el.textContent = msg;
+    el.className = type;
+  }
+
+  function checkGatewayStatus() {
+    fetch('/gateway/status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var btn = qs('#btn-gateway');
+        if (data.running) {
+          setGatewayStatus('ok', '● Gateway is running');
+          qs('#btn-gateway-text').textContent = '✓ Gateway Running';
+          btn.disabled = true;
+        } else {
+          setGatewayStatus('', '');
+          qs('#btn-gateway-text').textContent = '▶ Start Gateway';
+          btn.disabled = false;
+        }
+      })
+      .catch(function() {});
+  }
+
+  qs('#btn-gateway').addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true;
+    qs('#btn-gateway-text').textContent = 'Starting…';
+    setGatewayStatus('info', 'Starting gateway...');
+
+    fetch('/gateway/start', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          setGatewayStatus('info', 'Waiting for gateway...');
+          // Poll until it's up (up to 10s)
+          var attempts = 0;
+          var poll = setInterval(function() {
+            attempts++;
+            fetch('/gateway/status')
+              .then(function(r) { return r.json(); })
+              .then(function(s) {
+                if (s.running) {
+                  clearInterval(poll);
+                  setGatewayStatus('ok', '● Gateway is running');
+                  qs('#btn-gateway-text').textContent = '✓ Gateway Running';
+                  btn.disabled = true;
+                } else if (attempts >= 10) {
+                  clearInterval(poll);
+                  setGatewayStatus('ok', '● Gateway started (may take a moment)');
+                  qs('#btn-gateway-text').textContent = '✓ Gateway Started';
+                  btn.disabled = true;
+                }
+              });
+          }, 1000);
+        } else {
+          setGatewayStatus('err', '✗ ' + (data.error || 'Failed to start gateway.'));
+          qs('#btn-gateway-text').textContent = '▶ Start Gateway';
+          btn.disabled = false;
+        }
+      })
+      .catch(function() {
+        setGatewayStatus('err', '✗ Network error.');
+        qs('#btn-gateway-text').textContent = '▶ Start Gateway';
+        btn.disabled = false;
+      });
+  });
+
+  /* ── Pairing helpers ── */
+  function refreshPairingSection(listEl, sectionEl, manualInputEl, msgEl) {
+    fetch('/pairing/list')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var hasRequests = data.ok && data.requests && data.requests.length > 0;
+        if (!hasRequests) {
+          if (sectionEl) sectionEl.style.display = 'none';
+          return;
+        }
+        if (sectionEl) sectionEl.style.display = '';
+        listEl.innerHTML = '';
+        data.requests.forEach(function(req) {
+          var row = document.createElement('div');
+          row.className = 'pairing-request-row';
+          var name = req.firstName ? req.firstName + ' (@' + req.username + ')' : '@' + req.username;
+          row.innerHTML =
+            '<span class="req-name">' + name + '</span>' +
+            '<span class="req-code">' + req.code + '</span>' +
+            '<button class="btn-approve" data-code="' + req.code + '">Approve</button>';
+          listEl.appendChild(row);
+        });
+        listEl.querySelectorAll('.btn-approve').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var code = this.dataset.code;
+            approvePairingCode(code, msgEl, btn, listEl, sectionEl, manualInputEl);
+          });
+        });
+      })
+      .catch(function() {});
+  }
+
+  function approvePairingCode(code, msgEl, btnEl, listEl, sectionEl, manualInputEl) {
+    if (!code) {
+      msgEl.textContent = 'Please enter a pairing code.';
+      msgEl.className = 'pairing-msg err';
+      return;
+    }
+    if (btnEl) btnEl.disabled = true;
+    msgEl.textContent = 'Approving...';
+    msgEl.className = 'pairing-msg';
+
+    fetch('/pairing/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          msgEl.textContent = '✓ Approved! Your bot will now reply to messages.';
+          msgEl.className = 'pairing-msg ok';
+          if (manualInputEl) manualInputEl.value = '';
+          // Re-check list — hide section if no more pending requests
+          setTimeout(function() {
+            refreshPairingSection(listEl, sectionEl, manualInputEl, msgEl);
+          }, 800);
+        } else {
+          msgEl.textContent = '✗ ' + (data.error || 'Approval failed.');
+          msgEl.className = 'pairing-msg err';
+          if (btnEl) btnEl.disabled = false;
+        }
+      })
+      .catch(function() {
+        msgEl.textContent = '✗ Network error.';
+        msgEl.className = 'pairing-msg err';
+        if (btnEl) btnEl.disabled = false;
+      });
+  }
+
+  function loadPairingRequests(listEl, sectionEl, manualInputEl) {
+    refreshPairingSection(listEl, sectionEl, manualInputEl, listEl.parentElement.querySelector('.pairing-msg'));
+  }
+
+  /* ── Dashboard logic ── */
+  var CONFIGURED = {{ 'true' if configured else 'false' }};
+
+  function setDashGatewayStatus(running) {
+    var badge = qs('#dash-gateway-badge');
+    var btn = qs('#dash-btn-gateway');
+    if (running) {
+      badge.textContent = '● Running';
+      badge.className = 'dash-badge running';
+      btn.textContent = '✓ Gateway Running';
+      btn.disabled = true;
+    } else {
+      badge.textContent = '● Stopped';
+      badge.className = 'dash-badge stopped';
+      btn.textContent = '▶ Start Gateway';
+      btn.disabled = false;
+    }
+  }
+
+  function dashCheckGateway() {
+    fetch('/gateway/status')
+      .then(function(r) { return r.json(); })
+      .then(function(d) { setDashGatewayStatus(d.running); })
+      .catch(function() {
+        qs('#dash-gateway-badge').textContent = 'Unknown';
+        qs('#dash-gateway-badge').className = 'dash-badge checking';
+      });
+  }
+
+  if (CONFIGURED) {
+    hide(qs('#setup-form'));
+    hide(qs('#step-bar'));
+    qs('#dashboard').style.display = 'block';
+    dashCheckGateway();
+    loadPairingRequests(qs('#dash-pairing-requests'), qs('#dash-pairing-section'), qs('#dash-pairing-code'));
+
+    qs('#dash-btn-approve-manual').addEventListener('click', function() {
+      var code = qs('#dash-pairing-code').value.trim().toUpperCase();
+      approvePairingCode(code, qs('#dash-pairing-msg'), this, qs('#dash-pairing-requests'), qs('#dash-pairing-section'), qs('#dash-pairing-code'));
+    });
+    qs('#dash-pairing-code').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') qs('#dash-btn-approve-manual').click();
+    });
+
+    qs('#dash-btn-gateway').addEventListener('click', function() {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = 'Starting…';
+      var msg = qs('#dash-gateway-msg');
+      msg.textContent = 'Starting gateway...';
+      msg.className = '';
+
+      fetch('/gateway/start', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            msg.textContent = 'Waiting for gateway...';
+            var attempts = 0;
+            var poll = setInterval(function() {
+              attempts++;
+              fetch('/gateway/status')
+                .then(function(r) { return r.json(); })
+                .then(function(s) {
+                  if (s.running) {
+                    clearInterval(poll);
+                    setDashGatewayStatus(true);
+                    msg.textContent = '● Gateway is running';
+                    msg.className = 'ok';
+                  } else if (attempts >= 10) {
+                    clearInterval(poll);
+                    setDashGatewayStatus(true);
+                    msg.textContent = '● Gateway started';
+                    msg.className = 'ok';
+                  }
+                });
+            }, 1000);
+          } else {
+            msg.textContent = '✗ ' + (data.error || 'Failed to start gateway.');
+            msg.className = 'err';
+            btn.disabled = false;
+            btn.textContent = '▶ Start Gateway';
+          }
+        })
+        .catch(function() {
+          msg.textContent = '✗ Network error.';
+          msg.className = 'err';
+          btn.disabled = false;
+          btn.textContent = '▶ Start Gateway';
+        });
+    });
+
+    qs('#dash-btn-reconfigure').addEventListener('click', function() {
+      qs('#dashboard').style.display = 'none';
+      qs('#step-bar').style.display = '';
+      qs('#setup-form').style.display = '';
+    });
+  }
+
   /* ── Init ── */
-  setStepActive(0);
-  // Set default placeholder for initially selected provider
-  qs('#llm-api-key').placeholder = PLACEHOLDERS[selectedProvider];
+  if (!CONFIGURED) {
+    setStepActive(0);
+    selectProvider(selectedProvider);
+  }
 
 })();
 </script>

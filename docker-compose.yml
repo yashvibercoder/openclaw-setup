@@ -1,0 +1,13 @@
+services:
+  openclaw-setup:
+    build: .
+    container_name: openclaw-setup
+    ports:
+      - "7070:7070"
+    volumes:
+      # Persist OpenClaw config and credentials across container restarts
+      - openclaw-data:/root/.openclaw
+    restart: no
+
+volumes:
+  openclaw-data:

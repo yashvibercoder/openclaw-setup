@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import traceback
@@ -156,15 +157,85 @@ def _run_apply_config(payload: dict) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------------
+# Gateway helpers
+# ---------------------------------------------------------------------------
+
+def _find_openclaw() -> "str | None":
+    """Locate the openclaw executable across platforms."""
+    IS_WIN = sys.platform == "win32"
+    if IS_WIN:
+        for name in ("openclaw", "openclaw.cmd", "openclaw.exe"):
+            found = shutil.which(name)
+            if found:
+                return found
+        for d in [os.path.expandvars(r"%APPDATA%\npm"), r"C:\Program Files\nodejs"]:
+            for ext in (".cmd", ".exe", ""):
+                p = os.path.join(d, "openclaw" + ext)
+                if os.path.exists(p):
+                    return p
+        return None
+    found = shutil.which("openclaw")
+    if found:
+        return found
+    for d in ["/usr/local/bin", "/usr/bin", os.path.expanduser("~/.npm-global/bin"), "/root/.npm-global/bin"]:
+        p = os.path.join(d, "openclaw")
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
+
+def _is_gateway_running() -> bool:
+    """Return True if the openclaw gateway is reachable by probing its HTTP port."""
+    import urllib.request
+    try:
+        urllib.request.urlopen("http://127.0.0.1:18789/", timeout=3)
+        return True
+    except Exception:
+        pass
+    # Gateway returns non-200 but still responds — check if port is open
+    import socket
+    try:
+        s = socket.create_connection(("127.0.0.1", 18789), timeout=3)
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
 
+def _load_existing_config() -> dict:
+    """Read current openclaw.json and return a summary dict for the UI."""
+    cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+    summary = {"provider": "", "model": "", "bot_token_set": False}
+    if not cfg_path.exists():
+        return summary
+    try:
+        cfg = json.loads(cfg_path.read_text())
+        summary["model"] = (
+            cfg.get("agents", {}).get("defaults", {}).get("model", {}).get("primary", "")
+        )
+        if summary["model"]:
+            parts = summary["model"].split("/", 1)
+            summary["provider"] = parts[0] if len(parts) == 2 else ""
+        tg = cfg.get("channels", {}).get("telegram", {})
+        summary["bot_token_set"] = bool(tg.get("botToken", ""))
+        summary["telegram_enabled"] = tg.get("enabled", False)
+    except Exception:
+        pass
+    return summary
+
+
 @app.route("/", methods=["GET"])
 def index():
-    """Serve the setup HTML page."""
+    """Serve the setup HTML page, or the dashboard if already configured."""
     try:
-        return render_template("index.html", is_pi=IS_PI)
+        configured = (Path.home() / ".openclaw" / ".configured").exists()
+        existing = _load_existing_config() if configured else {}
+        return render_template("index.html", is_pi=IS_PI, configured=configured, existing=existing)
     except Exception:
         print(traceback.format_exc(), file=sys.stderr)
         return _error("Could not render setup page. Check that templates/index.html exists.", 500)
@@ -187,6 +258,10 @@ def save():
         # Normalise provider to lowercase before forwarding.
         data["llm_provider"] = data["llm_provider"].strip().lower()
 
+        # Normalise model if provided.
+        if data.get("llm_model"):
+            data["llm_model"] = data["llm_model"].strip()
+
         # Resolve base_url for non-custom providers so apply_config doesn't
         # need to know about PROVIDER_URLS.
         if data["llm_provider"] != "custom":
@@ -207,8 +282,7 @@ def save():
 def status():
     """Return current platform / setup status as JSON."""
     try:
-        config_dir = _BASE_DIR / "config"
-        configured = (config_dir / ".setup_complete").exists()
+        configured = (Path.home() / ".openclaw" / ".configured").exists()
 
         return jsonify(
             {
@@ -289,6 +363,120 @@ def test_llm():
     except Exception as exc:
         print(traceback.format_exc(), file=sys.stderr)
         return jsonify({"ok": False, "error": str(exc)})
+
+
+@app.route("/pairing/list", methods=["GET"])
+def pairing_list():
+    """Return pending Telegram pairing requests."""
+    exe = _find_openclaw()
+    if not exe:
+        return _error("openclaw not found.", 500)
+    try:
+        result = subprocess.run(
+            [exe, "pairing", "list", "telegram", "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+        # Try JSON output first; fall back to parsing table output
+        try:
+            data = json.loads(result.stdout.strip())
+            return jsonify({"ok": True, "requests": data})
+        except Exception:
+            pass
+
+        # Parse table output: extract Code and username columns
+        requests = []
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("│") and "│" in line[1:]:
+                cols = [c.strip() for c in line.strip("│").split("│")]
+                if len(cols) >= 3 and cols[0] and cols[0] not in ("Code", "─"):
+                    code = cols[0].strip()
+                    if code and not code.startswith("─") and code != "Code":
+                        try:
+                            meta = json.loads(cols[2]) if cols[2] else {}
+                        except Exception:
+                            meta = {}
+                        requests.append({
+                            "code": code,
+                            "username": meta.get("username", cols[1].strip()),
+                            "firstName": meta.get("firstName", ""),
+                        })
+        return jsonify({"ok": True, "requests": requests})
+    except subprocess.TimeoutExpired:
+        return _error("Command timed out.", 500)
+    except Exception as exc:
+        print(traceback.format_exc(), file=sys.stderr)
+        return _error(str(exc), 500)
+
+
+@app.route("/pairing/approve", methods=["POST"])
+def pairing_approve():
+    """Approve a Telegram pairing request by code."""
+    exe = _find_openclaw()
+    if not exe:
+        return _error("openclaw not found.", 500)
+    try:
+        data = request.get_json(silent=True) or {}
+        code = data.get("code", "").strip().upper()
+        if not code:
+            return _error("code is required.")
+        result = subprocess.run(
+            [exe, "pairing", "approve", "telegram", code],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "Approval failed.").strip()
+            return _error(err, 400)
+        return jsonify({"ok": True, "message": f"Pairing code {code} approved."})
+    except subprocess.TimeoutExpired:
+        return _error("Command timed out.", 500)
+    except Exception as exc:
+        print(traceback.format_exc(), file=sys.stderr)
+        return _error(str(exc), 500)
+
+
+@app.route("/gateway/status", methods=["GET"])
+def gateway_status():
+    """Return whether the openclaw gateway is currently running."""
+    running = _is_gateway_running()
+    return jsonify({"ok": True, "running": running})
+
+
+@app.route("/gateway/start", methods=["POST"])
+def gateway_start():
+    """Start the openclaw gateway as a detached background process."""
+    if _is_gateway_running():
+        return jsonify({"ok": True, "message": "Gateway is already running."})
+
+    exe = _find_openclaw()
+    if not exe:
+        return _error("openclaw executable not found. Make sure it is installed.", 500)
+
+    try:
+        env = os.environ.copy()
+        env["OPENCLAW_NO_RESPAWN"] = "1"
+
+        if sys.platform == "win32":
+            subprocess.Popen(
+                [exe, "gateway"],
+                env=env,
+                creationflags=(subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP),
+                close_fds=True,
+            )
+        else:
+            subprocess.Popen(
+                [exe, "gateway"],
+                env=env,
+                close_fds=True,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    except Exception as exc:
+        print(traceback.format_exc(), file=sys.stderr)
+        return _error(f"Failed to start gateway: {exc}", 500)
+
+    return jsonify({"ok": True, "message": "Gateway started."})
 
 
 # ---------------------------------------------------------------------------

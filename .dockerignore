@@ -1,0 +1,10 @@
+.git
+.gitignore
+.gitattributes
+*.bat
+*.command
+*.sh
+installers/
+services/
+__pycache__/
+*.pyc
